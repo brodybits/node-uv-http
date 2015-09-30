@@ -1,6 +1,6 @@
-# node-evhtp
+# node-libevhtp
 
-Use libevhtp from Node.js
+Use libevhtp from Node.js (low-level)
 
 Author: Christopher J. Brody
 
@@ -12,14 +12,17 @@ In case I accept contributions from any others I will require CLA with similar s
 I may offer this work under other licensing terms in the future.
 
 NOTE: This project is under development and should be considered experimental.
-API is subject to change and some optimizations are expected to be required.
+API is subject to change and some optimizations may be needed.
 
 Status: under development
+- SSL and REGEX capabilities are currently disabled
 
 ## Pre-requisites:
 
 - check out libevhtp
 - unpack and build libevent-2.0.22-stable
+
+XXX TODO: should be automatic!
 
 ## Build and test
 

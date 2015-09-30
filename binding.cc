@@ -2,7 +2,9 @@
 #include <evhtp.h>
 #include <iostream>
 
-// made with help from evhtp sample:
+// made with *some* help from:
+// - https://nodejs.org/api/addons.html
+// - https://github.com/ellzey/libevhtp/blob/develop/README.markdown
 
 void mycb(evhtp_request_t * r, void *) {
   evbuffer_add_reference(r->buffer_out, "asdf", 4, NULL, NULL);
