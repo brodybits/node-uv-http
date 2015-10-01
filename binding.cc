@@ -1,4 +1,4 @@
-#include <nan.h>
+#include <nan_object_wrap_template.h>
 #include <evhtp.h>
 #include <iostream>
 
