@@ -9,11 +9,6 @@
 //   which is based on:
 //   https://github.com/nodejs/nan/blob/master/test/cpp/objectwraphandle.cpp
 
-void mycb(evhtp_request_t * r, void *) {
-  evbuffer_add_reference(r->buffer_out, "asdf", 4, NULL, NULL);
-  evhtp_send_reply(r, EVHTP_RES_OK);
-}
-
 class MyEventServer : public ObjectWrapTemplate<MyEventServer> {
 public:
   MyEventServer(Nan::NAN_METHOD_ARGS_TYPE) {
@@ -46,11 +41,21 @@ public: // XXX TODO find a better way to share:
   evbase_t * evbase;
 };
 
+struct StaticPathInfo {
+  StaticPathInfo(const char * path, int code, const char * content) :
+    path(path), code(code), content(content) {}
+
+  std::string path;
+  int code;
+  std::string content;
+};
+
 class HTTPServer : public ObjectWrapTemplate<HTTPServer> {
 public:
   static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
     function_template tpl =
       NewConstructorFunctionTemplate("HTTPServer", 1);
+    SetPrototypeMethod(tpl, "staticPath", StaticPath);
     SetPrototypeMethod(tpl, "bindSocket", BindSocket);
     SetConstructorFunctionTemplate(tpl);
   }
@@ -59,9 +64,6 @@ public:
     if (args_info.Length() >= 1) {
       MyEventServer * evs = Unwrap<MyEventServer>(args_info[0]->ToObject());
       evh = evhtp_new(evs->evbase, NULL);
-
-      // XXX TODO MOVE:
-      evhtp_set_cb(evh, "/", mycb, NULL);
     }
   }
 
@@ -71,8 +73,46 @@ public:
     return NewInstanceMethod(argc, argv);
   }
 
+  static void StaticPath(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    HTTPServer * myself = ObjectFromMethodArgsInfo(args_info);
+
+    if (args_info.Length() < 3 ||
+        !args_info[0]->IsString() ||
+        !args_info[1]->IsInt32() ||
+        !args_info[2]->IsString()) {
+      std::cerr << "Sorry incorrect arguments to staticPath" << std::endl;
+      return;
+    }
+
+    std::string mypath(*v8::String::Utf8Value(args_info[0]->ToString()));
+
+    // XXX TBD ???:
+    if (mypath[0] != '/') {
+      std::cerr << "Sorry invalid path" << std::endl;
+      return;
+    }
+
+    // XXX TODO:
+    // - Support true Buffer(s)
+    // - TBD ???: free the memory in case this static path is no longer relevant
+    // - TBD ???: get rid of extra std::string storage to make this more efficient
+    std::string mycontent(*v8::String::Utf8Value(args_info[2]->ToString()));
+    StaticPathInfo * info =
+      new StaticPathInfo(mypath.c_str(), args_info[1]->Int32Value(), mycontent.c_str());
+
+    evhtp_set_cb(myself->evh, mypath.c_str(), StaticCB, reinterpret_cast<void *>(info));
+  }
+
+  static void StaticCB(evhtp_request_t * r, void * p) {
+    StaticPathInfo * info = reinterpret_cast<StaticPathInfo *>(p);
+
+    evbuffer_add_reference(r->buffer_out, info->content.c_str(), info->content.size(), NULL, NULL);
+    evhtp_send_reply(r, info->code);
+  }
+
   static void BindSocket(Nan::NAN_METHOD_ARGS_TYPE args_info) {
     HTTPServer * myself = ObjectFromMethodArgsInfo(args_info);
+
     if (args_info.Length() < 3 ||
         !args_info[0]->IsString() ||
         !args_info[1]->IsInt32() ||
@@ -80,6 +120,7 @@ public:
       std::cerr << "Sorry incorrect arguments to bindSocket" << std::endl;
       return;
     }
+
     evhtp_bind_socket(myself->evh, *v8::String::Utf8Value(args_info[0]->ToString()),
                       args_info[1]->Int32Value(), args_info[2]->Int32Value());
   }
