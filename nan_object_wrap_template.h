@@ -10,8 +10,8 @@
 
 #include <nan.h>
 
- #ifndef NAN_OBJECT_WRAP_TEMPLATE_H_
- #define NAN_OBJECT_WRAP_TEMPLATE_H_
+#ifndef NAN_OBJECT_WRAP_TEMPLATE_H_
+#define NAN_OBJECT_WRAP_TEMPLATE_H_
 
 template <typename T>
 class ObjectWrapTemplate : public Nan::ObjectWrap {
@@ -48,26 +48,18 @@ class ObjectWrapTemplate : public Nan::ObjectWrap {
       obj->Wrap(info.This());
       info.GetReturnValue().Set(info.This());
     } else {
-      // XXX TODO MULTIPLE ARGS:
-      const int argc = 1;
-      v8::Local<v8::Value> argv[argc] = {info[0]};
-      v8::Local<v8::Function> cons = Nan::New(constructor());
-      info.GetReturnValue().Set(cons->NewInstance(argc, argv));
+      NewInstanceMethod(info);
     }
   }
 
   // ref: https://nodejs.org/api/addons.html#addons_factory_of_wrapped_objects
   // (same as static NAN_METHOD(NewInstanceMethod) { ... })
   static inline void NewInstanceMethod(Nan::NAN_METHOD_ARGS_TYPE info) {
-    // XXX TODO MULTIPLE ARGS:
     v8::Local<v8::Function> cons = Nan::New(constructor());
-    if (info.Length() == 0 || info[0]->IsUndefined()) {
-      v8::Local<v8::Value> argv[0] = {};
-      info.GetReturnValue().Set(cons->NewInstance(0, argv));
-    } else {
-      v8::Local<v8::Value> argv[1] = { info[0]->ToObject() };
-      info.GetReturnValue().Set(cons->NewInstance(1, argv));
-    }
+    const int argc = info.Length();
+    std::vector<v8::Local<v8::Value> > argv;
+    for (int i=0; i<argc; ++i) argv.push_back(info[i]);
+    info.GetReturnValue().Set(cons->NewInstance(argc, &argv[0]));
   }
   static inline v8::Local<v8::Value> NewInstanceMethod(int argc, v8::Local<v8::Value> argv[]) {
     v8::Local<v8::Function> cons = Nan::New(constructor());
