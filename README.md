@@ -18,6 +18,9 @@ API is subject to change and some optimizations may be needed.
 Status: under development
 - SSL and REGEX capabilities are currently disabled
 
+Intended usage: Since this library uses a blocking event loop to run the actual HTTP server,
+it is recommended to run it in its own thread using a module such as `node-webworker-threads`.
+
 ## Pre-requisites:
 
 - check out libevhtp
@@ -46,5 +49,5 @@ node mytest.js
 In another window:
 
 ```shell
-curl http://localhost:8000
+curl http://localhost:8080
 ```
