@@ -1,4 +1,4 @@
-#include <node.h>
+#include <nan.h>
 #include <evhtp.h>
 #include <iostream>
 
@@ -11,7 +11,8 @@ void mycb(evhtp_request_t * r, void *) {
   evhtp_send_reply(r, EVHTP_RES_OK);
 }
 
-void mytest(const v8::FunctionCallbackInfo<v8::Value> & cbinfo) {
+Nan::NAN_METHOD_RETURN_TYPE // void
+mytest(Nan::NAN_METHOD_ARGS_TYPE args_info) {
   std::cout << "got mytest()" << std::endl;
 
   int port = 8000;
@@ -24,8 +25,9 @@ void mytest(const v8::FunctionCallbackInfo<v8::Value> & cbinfo) {
   event_base_loop(b, 0);
 }
 
-void init(v8::Local<v8::Object> exports) {
-  NODE_SET_METHOD(exports, "mytest", mytest);
+void init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target) {
+  Nan::Set(target, Nan::New<v8::String>("mytest").ToLocalChecked(),
+           Nan::New<v8::FunctionTemplate>(mytest)->GetFunction());
 }
 
 NODE_MODULE(evhtp, init)

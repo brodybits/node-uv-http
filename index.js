@@ -1,1 +1,1 @@
-module.exports = require('bindings')('node-evhtp');
+module.exports = require('bindings')('node-libevhtp');

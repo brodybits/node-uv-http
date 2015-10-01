@@ -1,12 +1,13 @@
 {
   "targets": [
     {
-      "target_name": "node-evhtp",
+      "target_name": "node-libevhtp",
       "sources": [
         "evhtp-all.c",
         "binding.cc"
       ],
       "include_dirs": [
+        "<!(node -e \"require ('nan')\")",
         ".",
         "libevhtp",
         "libevent-2.0.22-stable",
