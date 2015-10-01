@@ -59,11 +59,21 @@ class ObjectWrapTemplate : public Nan::ObjectWrap {
   // ref: https://nodejs.org/api/addons.html#addons_factory_of_wrapped_objects
   // (same as static NAN_METHOD(NewInstanceMethod) { ... })
   static inline void NewInstanceMethod(Nan::NAN_METHOD_ARGS_TYPE info) {
+    // XXX TODO MULTIPLE ARGS:
     v8::Local<v8::Function> cons = Nan::New(constructor());
-    double value = info[0]->IsUndefined() ? 0 : info[0]->NumberValue();
-    v8::Local<v8::Value> argv[1] = {Nan::New(value)};
-    info.GetReturnValue().Set(cons->NewInstance(1, argv));
+    if (info.Length() == 0 || info[0]->IsUndefined()) {
+      v8::Local<v8::Value> argv[0] = {};
+      info.GetReturnValue().Set(cons->NewInstance(0, argv));
+    } else {
+      v8::Local<v8::Value> argv[1] = { info[0]->ToObject() };
+      info.GetReturnValue().Set(cons->NewInstance(1, argv));
+    }
   }
+  static inline v8::Local<v8::Value> NewInstanceMethod(int argc, v8::Local<v8::Value> argv[]) {
+    v8::Local<v8::Function> cons = Nan::New(constructor());
+    return cons->NewInstance(argc, argv);
+  }
+
   static inline T * ObjectFromMethodArgsInfo(Nan::NAN_METHOD_ARGS_TYPE info) {
     return ObjectWrap::Unwrap<T>(info.This());
   }
