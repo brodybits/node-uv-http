@@ -101,6 +101,7 @@ public:
     SetPrototypeMethod(tpl, "staticPath", StaticPath);
     SetPrototypeMethod(tpl, "pathCB", PathCB);
     SetPrototypeMethod(tpl, "bindSocket", BindSocket);
+    SetPrototypeMethod(tpl, "uvtest", uvtest);
     SetConstructorFunctionTemplate(tpl);
   }
 
@@ -202,6 +203,41 @@ public:
     f->Call(Nan::Null(), argc, argv);
   }
 
+  static void AllocForRead(uv_handle_t *, size_t s, uv_buf_t * b) {
+    uint8_t * mybuf = new uint8_t[s];
+    b->base = reinterpret_cast<char *>(mybuf);
+    b->len = s;
+  }
+
+  static void TestRead(uv_stream_t * s, ssize_t n, const uv_buf_t * b) {
+    std::cout << "read cb n: " << n << std::endl;
+    if (n > 0) {
+      std::string s((const char *)b->base, n);
+      std::cout << "read: " << s << std::endl;
+    }
+    uv_write_t mywrite;
+    std::string resp("HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nabc\n");
+    uv_buf_t mybuf;
+    mybuf.base = (char *)(resp.c_str());
+    mybuf.len = resp.length();
+    uv_write(&mywrite, s, &mybuf, 1, NULL);
+  }
+
+  static void HandleNewConnection(uv_stream_t *s, int st) {
+    if (st < 0) {
+      std::cerr << "new connection with error status: " << st << std::endl;
+      return;
+    }
+    uv_tcp_t * tcpin = new uv_tcp_t; // XXX TODO in a struct instead!
+    uv_tcp_init(uv_default_loop(), tcpin);
+    int r = uv_accept(s, (uv_stream_t *)tcpin);
+    if (r != 0) {
+      uv_close(reinterpret_cast<uv_handle_t *>(tcpin), NULL);
+      return;
+    }
+    uv_read_start(reinterpret_cast<uv_stream_t *>(tcpin), AllocForRead, TestRead);
+  }
+
   static void BindSocket(Nan::NAN_METHOD_ARGS_TYPE args_info) {
     HTTPServer * myself = ObjectFromMethodArgsInfo(args_info);
 
@@ -215,6 +251,34 @@ public:
 
     evhtp_bind_socket(myself->evh, *v8::String::Utf8Value(args_info[0]->ToString()),
                       args_info[1]->Int32Value(), args_info[2]->Int32Value());
+  }
+
+  //uv_tcp_t mytcp;
+  //static uv_tcp_t mytcp;
+  //struct sockaddr_in myaddr;
+
+  static void uvtest(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    // *some* help from: https://nikhilm.github.io/uvbook/networking.html
+    //uv_tcp_t mytcp;
+    // XXX TODO TODO:
+    static uv_tcp_t mytcp;
+    struct sockaddr_in myaddr;
+
+    std::cout << "start uvtest" << std::endl;
+    std::cout << "w: " << uv_default_loop()->nwatchers << std::endl;
+    uv_tcp_init(uv_default_loop(), &mytcp);
+    std::cout << "w: " << uv_default_loop()->nwatchers << std::endl;
+    uv_ip4_addr("0.0.0.0", 8000, &myaddr);
+    std::cout << "w: " << uv_default_loop()->nwatchers << std::endl;
+    uv_tcp_bind(&mytcp, reinterpret_cast<const sockaddr *>(&myaddr), 0);
+    std::cout << "w: " << uv_default_loop()->nwatchers << std::endl;
+    std::cout << "start listen" << std::endl;
+    int res = uv_listen(reinterpret_cast<uv_stream_t *>(&mytcp), 1024, HandleNewConnection);
+    if (res != 0) {
+      std::cerr << "sorry listen error: " << res << std::endl;
+    }
+    std::cout << "w: " << uv_default_loop()->nwatchers << std::endl;
+    std::cout << "exit uvtest function" << std::endl;
   }
 
   evhtp_t * evh;
