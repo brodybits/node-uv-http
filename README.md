@@ -1,6 +1,6 @@
-# node-libevhtp
+# node-uv-http
 
-Use libevhtp from Node.js (low-level)
+Node HTTP server library that serves static content from native code.
 
 Author: Christopher J. Brody
 
@@ -16,13 +16,13 @@ NOTE: This project is under development and should be considered experimental.
 API is subject to change and some optimizations may be needed.
 
 Status: under development
-- SSL and REGEX capabilities are currently disabled
 
-Intended usage: Since this library uses a blocking event loop to run the actual HTTP server,
-it is recommended to run it in its own thread using a module such as `node-webworker-threads`.
+~~Intended usage: Since this library uses a blocking event loop to run the actual HTTP server,
+it is recommended to run it in its own thread using a module such as `node-webworker-threads`.~~
 
 ## Pre-requisites:
 
+XXX TBD GOING AWAY:
 - check out libevhtp
 - unpack and build libevent-2.0.22-stable
 
@@ -48,6 +48,20 @@ node mytest.js
 
 In another window:
 
+Static content from native code:
+
 ```shell
 curl http://localhost:8080
+```
+
+Content from Javascript callback:
+
+```shell
+curl http://localhost:8080/test
+```
+
+Content from Javascript callback in the next tick:
+
+```shell
+curl http://localhost:8080/test2
 ```

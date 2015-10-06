@@ -1,6 +1,7 @@
 targets: [
   {
-    target_name: 'node-libevhtp'
+    #target_name: 'node-libevhtp'
+    target_name: 'node-uv-http'
     sources: [
       'evhtp-all.c'
       'binding.cc'

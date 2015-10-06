@@ -1,14 +1,14 @@
 {
-  "name": "node-evhtp",
+  "name": "node-uv-http",
   "version": "0.0.1-dev",
-  "description": "Node bindings to libevhtp",
+  "description": "Node HTTP server library that serves static content from native code",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "install": "node-gyp rebuild"
   },
   "keywords": [
-    "libevhtp"
+    "http"
   ],
   "author": "Christopher J. Brody",
   "license": "MIT OR BSD-3-Clause",
