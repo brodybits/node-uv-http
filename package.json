@@ -11,7 +11,7 @@
     "http"
   ],
   "author": "Christopher J. Brody",
-  "license": "MIT OR BSD-3-Clause",
+  "license": "MIT",
   "gypfile": true,
   "dependencies": {
     "bindings": "^1.2.1",

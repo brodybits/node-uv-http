@@ -1,49 +1,13 @@
 #include <nan_object_wrap_template.h>
-//#include <evhtp.h>
 #include <iostream>
 #include <sstream>
 
 #include <tr1/unordered_map>
 
 // made with *some* help from:
-// - https://github.com/ellzey/libevhtp/blob/develop/README.markdown
 // - https://github.com/brodybits/nan/blob/cb-object-wrapper-template/test/cpp/wrappedobjectfactory.cpp
 //   which is based on:
 //   https://github.com/nodejs/nan/blob/master/test/cpp/objectwraphandle.cpp
-
-/*
-class MyEventServer : public ObjectWrapTemplate<MyEventServer> {
-public:
-  MyEventServer(Nan::NAN_METHOD_ARGS_TYPE) {
-    // XXX TODO CLEANUP evbase object
-    evbase = event_base_new();
-  }
-  ~MyEventServer() {}
-
-  static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
-    function_template tpl =
-      NewConstructorFunctionTemplate("MyEventServer", 1);
-    SetPrototypeMethod(tpl, "newHTTPServer", NewHTTPServer);
-    SetPrototypeMethod(tpl, "loop", Loop);
-    SetConstructorFunctionTemplate(tpl);
-  }
-
-  static void NewInstance(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    NewInstanceMethod(args_info);
-  }
-
-private:
-  static void NewHTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info);
-
-  static void Loop(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    MyEventServer * myself = ObjectFromMethodArgsInfo(args_info);
-    event_base_loop(myself->evbase, 0);
-  }
-
-public: // XXX TODO find a better way to share:
-  evbase_t * evbase;
-};
-*/
 
 struct PathInfo {
   PathInfo(const char * path, int code, const char * content) :
@@ -122,8 +86,6 @@ public:
     }
 
     std::string cs (*v8::String::Utf8Value(args_info[1]->ToString()));
-    //evbuffer_add_reference(myself->r->buffer_out, cs.c_str(), cs.length(), NULL, NULL);
-    //evhtp_send_reply(myself->r, args_info[0]->Int32Value());
 
     //uv_write_t mywrite;
     uv_write_t * writehandle = new uv_write_t;
@@ -147,9 +109,6 @@ public:
   PathCBInfo * info;
 
   uv_stream_t * s;
-
-  // XXX OLD:
-  //evhtp_request_t * r;
 };
 
 class HTTPServer : public ObjectWrapTemplate<HTTPServer> {
@@ -166,10 +125,6 @@ public:
 
   HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
     /*
-    if (args_info.Length() >= 1) {
-      MyEventServer * evs = Unwrap<MyEventServer>(args_info[0]->ToObject());
-      evh = evhtp_new(evs->evbase, NULL);
-    }
     */
   }
 
@@ -237,42 +192,9 @@ public:
     v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(args_info[1]);
     //PathCBInfo * info = new PathCBInfo(f);
 
-    //evhtp_set_cb(myself->evh, mypath.c_str(), PathCBCall, reinterpret_cast<void *>(info));
-
     PathCBInfo pi(f);
     myself->routes[mypath] = pi;
   }
-
-/*
-  static void StaticCB(evhtp_request_t * r, void * p) {
-    StaticPathInfo * info = reinterpret_cast<StaticPathInfo *>(p);
-
-    evbuffer_add_reference(r->buffer_out, info->content.c_str(), info->content.size(), NULL, NULL);
-    evhtp_send_reply(r, info->code);
-  }
-*/
-
-/*
-  static void PathCBCall(evhtp_request_t * r, void * p) {
-    PathCBInfo * info = reinterpret_cast<PathCBInfo *>(p);
-
-    //evbuffer_add_reference(r->buffer_out, info->content.c_str(), info->content.size(), NULL, NULL);
-    //evhtp_send_reply(r, info->code);
-
-    v8::Local<v8::Value> sr_argv[1] = {Nan::New(1)};
-    v8::Local<v8::Object> sr = HTTPServerReq::NewInstance(1, sr_argv)->ToObject();
-
-    HTTPServerReq * mysr = ObjectWrap::Unwrap<HTTPServerReq>(sr);
-    mysr->info = info;
-    mysr->r = r;
-
-    static int argc = 1;
-    v8::Local<v8::Value> argv[1] = {sr};
-
-    v8::Local<v8::Function> f = Nan::New(info->pf);
-    f->Call(Nan::Null(), argc, argv);
-  }
-*/
 
   static void AllocForRead(uv_handle_t *, size_t s, uv_buf_t * b) {
     uint8_t * mybuf = new uint8_t[s];
@@ -388,9 +310,6 @@ public:
       std::cerr << "Sorry incorrect arguments to bindSocket" << std::endl;
       return;
     }
-
-    //evhtp_bind_socket(myself->evh, *v8::String::Utf8Value(args_info[0]->ToString()),
-    //                  args_info[1]->Int32Value(), args_info[2]->Int32Value());
   }
 
   static void BindAddr(Nan::NAN_METHOD_ARGS_TYPE args_info) {
@@ -444,8 +363,6 @@ public:
 
   // XXX TODO use something better such as @c9s/r3 instead (!)
   std::tr1::unordered_map<std::string, PathInfo> routes;
-  // XXX REMOVE:
-  //evhtp_t * evh;
 
   // FUTURE TBD ???: mTCP - user-space TCP
   uv_tcp_t mytcphandle;
@@ -460,11 +377,8 @@ void MyEventServer::NewHTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
 */
 
 void init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target) {
-  //MyEventServer::Init(target);
   HTTPServerReq::Init(target);
   HTTPServer::Init(target);
-  //Nan::Set(target, Nan::New<v8::String>("newEventServer").ToLocalChecked(),
-  //         Nan::New<v8::FunctionTemplate>(MyEventServer::NewInstance)->GetFunction());
   Nan::Set(target, Nan::New<v8::String>("newHTTPServer").ToLocalChecked(),
            Nan::New<v8::FunctionTemplate>(HTTPServer::NewInstance)->GetFunction());
 }

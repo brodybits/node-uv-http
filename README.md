@@ -4,7 +4,7 @@ Node HTTP server library that serves static content from native code.
 
 Author: Christopher J. Brody
 
-License: MIT or BSD-3
+License: MIT
 
 I can hereby testify that this project is completely my own work and not subject to agreements with any other parties.
 The exception is `nan_object_wrap_template.h` which is derived from the Node.js Nan project.
@@ -16,17 +16,6 @@ NOTE: This project is under development and should be considered experimental.
 API is subject to change and some optimizations may be needed.
 
 Status: under development
-
-~~Intended usage: Since this library uses a blocking event loop to run the actual HTTP server,
-it is recommended to run it in its own thread using a module such as `node-webworker-threads`.~~
-
-## Pre-requisites:
-
-XXX TBD GOING AWAY:
-- check out libevhtp
-- unpack and build libevent-2.0.22-stable
-
-XXX TODO: should be automatic!
 
 ## Build and test
 
