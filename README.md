@@ -54,3 +54,8 @@ Content from Javascript callback in the next tick:
 ```shell
 curl http://localhost:8080/test2
 ```
+
+To stop the test program:
+```shell
+curl http://localhost:8080/stop
+```
