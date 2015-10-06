@@ -9,20 +9,25 @@
 //   which is based on:
 //   https://github.com/nodejs/nan/blob/master/test/cpp/objectwraphandle.cpp
 
+class HTTPServer;
+
 struct PathInfo {
-  PathInfo(const char * path, int code, const char * content) :
-    isRoute(true), path(path), code(code), content(content), hasCB(false) {}
+  PathInfo(v8::Local<v8::Object> srvHandle, const char * path, int code, const char * content) :
+    ps(srvHandle), isRoute(true), path(path), code(code), content(content), hasCB(false) {}
 
   // XXX TODO: should store & use V8 isolate value:
-  PathInfo(v8::Local<v8::Function> & f) : isRoute(true), pf(f), hasCB(true) {}
+  PathInfo(v8::Local<v8::Object> srvHandle, v8::Local<v8::Function> & f) :
+    ps(srvHandle), isRoute(true), pf(f), hasCB(true) {}
 
-  PathInfo(const PathInfo & rhs) : isRoute(rhs.isRoute),
-    hasCB(rhs.hasCB), path(rhs.path), code(rhs.code),
+  PathInfo(const PathInfo & rhs) : ps(Nan::New(rhs.ps)),
+    isRoute(rhs.isRoute), hasCB(rhs.hasCB),
+    path(rhs.path), code(rhs.code),
     content(rhs.content), pf(Nan::New(rhs.pf)) {}
 
   PathInfo() : isRoute(false), hasCB(false), code(404) {}
 
   PathInfo & operator=(PathInfo & rhs) {
+    ps.Reset(Nan::New(rhs.ps));
     isRoute = rhs.isRoute;
     hasCB = rhs.hasCB;
     path = rhs.path;
@@ -31,6 +36,10 @@ struct PathInfo {
     pf.Reset(Nan::New(rhs.pf));
     return *this;
   }
+
+  // NOTE: keep persistent handle of the HTTPServer object just the
+  // V8 Javascript side may release it:
+  Nan::Persistent<v8::Object> ps;
 
   bool isRoute;
   bool hasCB;
@@ -41,22 +50,6 @@ struct PathInfo {
 
   Nan::Persistent<v8::Function> pf;
 };
-
-/*
-struct StaticPathInfo : public PathInfo {
-  StaticPathInfo(const char * path, int code, const char * content) :
-    PathInfo(path, code, content) {}
-};
-
-struct PathCBInfo : public PathInfo {
-  // XXX TODO: should store & use V8 isolate value:
-  PathCBInfo(v8::Local<v8::Function> & f) : PathInfo(f) {}
-};
-*/
-
-typedef PathInfo StaticPathInfo;
-
-typedef PathInfo PathCBInfo;
 
 class HTTPServerReq : public ObjectWrapTemplate<HTTPServerReq> {
 public:
@@ -89,7 +82,8 @@ public:
 
     //uv_write_t mywrite;
     uv_write_t * writehandle = new uv_write_t;
-    //std::string resp("HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nabc\n");
+    writehandle->data = myself;
+
     std::stringstream sst;
     // XXX TODO FIX RESPONSE CODE
     sst << "HTTP/1.1 200 OK\r\nContent-Length: " << cs.length() <<
@@ -98,15 +92,22 @@ public:
     uv_buf_t mybuf;
     mybuf.base = (char *)(resp.c_str());
     mybuf.len = resp.length();
-    //uv_write(&mywrite, myself->s, &mybuf, 1, NULL);
     uv_write(writehandle, myself->s, &mybuf, 1, writecb);
   }
 
   static void writecb(uv_write_t * w, int) {
+    HTTPServerReq * myself = reinterpret_cast<HTTPServerReq *>(w->data);
+
     delete w;
+
+    uv_close(reinterpret_cast<uv_handle_t *>(myself->s), closecb);
   }
 
-  PathCBInfo * info;
+  static void closecb(uv_handle_t * h) {
+    delete h;
+  }
+
+  PathInfo * info;
 
   uv_stream_t * s;
 };
@@ -123,10 +124,7 @@ public:
     SetConstructorFunctionTemplate(tpl);
   }
 
-  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    /*
-    */
-  }
+  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {}
 
   ~HTTPServer() {}
 
@@ -163,9 +161,11 @@ public:
     // - TBD ???: get rid of extra std::string storage to make this more efficient
     std::string mycontent(*v8::String::Utf8Value(args_info[2]->ToString()));
 
-    PathInfo pi(mypath.c_str(), args_info[1]->Int32Value(), mycontent.c_str());
+    PathInfo pi(myself->handle(), mypath.c_str(), args_info[1]->Int32Value(), mycontent.c_str());
     myself->routes[mypath] = pi;
   }
+
+  // XXX FUTURE TBD: function to remove a path
 
   static void PathCB(Nan::NAN_METHOD_ARGS_TYPE args_info) {
     HTTPServer * myself = ObjectFromMethodArgsInfo(args_info);
@@ -187,28 +187,27 @@ public:
 
     // XXX TODO:
     // - Support true Buffer(s)
-    // - TBD ???: free the memory in case this static path is no longer relevant
     // - TBD ???: get rid of extra std::string storage to make this more efficient
     v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(args_info[1]);
-    //PathCBInfo * info = new PathCBInfo(f);
 
-    PathCBInfo pi(f);
+    PathInfo pi(myself->handle(), f);
     myself->routes[mypath] = pi;
   }
 
   static void AllocForRead(uv_handle_t *, size_t s, uv_buf_t * b) {
-    uint8_t * mybuf = new uint8_t[s];
+    void * mybuf = malloc(s);
     b->base = reinterpret_cast<char *>(mybuf);
     b->len = s;
   }
 
-  static void TestRead(uv_stream_t * s, ssize_t n, const uv_buf_t * b) {
+  static void HandleReadCB(uv_stream_t * s, ssize_t n, const uv_buf_t * b) {
     std::cout << "read cb n: " << n << std::endl;
 
     // XXX TODO [MISSING]:
     // - must wait for entire HTTP request
     // - error checking
-    // (use @nodejs/http-parser instead to solve these)
+    // - Keep-Alive support
+    // (use @nodejs/http-parser to [help] solve these)
 
     if (n < 0) return;
 
@@ -259,7 +258,9 @@ public:
         // XXX UGLY (TODO CLEANUP)
         std::cout << "found static" << std::endl;
         std::cout << "with code: " << found->second.code << std::endl;
-        uv_write_t mywrite;
+        //uv_write_t mywrite;
+        uv_write_t * writehandle = new uv_write_t;
+        writehandle->data = s;
         //std::string resp("HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nabc\n");
         std::stringstream sst;
         // XXX TODO FIX RESPONSE CODE
@@ -269,7 +270,7 @@ public:
         uv_buf_t mybuf;
         mybuf.base = (char *)(resp.c_str());
         mybuf.len = resp.length();
-        uv_write(&mywrite, s, &mybuf, 1, NULL);
+        uv_write(writehandle, s, &mybuf, 1, writecb);
       }
     } else {
       uv_write_t mywrite;
@@ -279,6 +280,17 @@ public:
       mybuf.len = resp.length();
       uv_write(&mywrite, s, &mybuf, 1, NULL);
     }
+
+    free(b->base);
+  }
+
+  static void writecb(uv_write_t * w, int) {
+    uv_close(reinterpret_cast<uv_handle_t *>(w->data), closecb);
+    delete w;
+  }
+
+  static void closecb(uv_handle_t * h) {
+    delete h;
   }
 
   static void HandleNewConnection(uv_stream_t *s, int st) {
@@ -287,7 +299,7 @@ public:
       return;
     }
 
-    uv_tcp_t * tcpin = new uv_tcp_t; // XXX TODO LEAK - keep in a struct instead!
+    uv_tcp_t * tcpin = new uv_tcp_t;
 
     uv_tcp_init(uv_default_loop(), tcpin);
     tcpin->data = s->data;
@@ -297,7 +309,7 @@ public:
       uv_close(reinterpret_cast<uv_handle_t *>(tcpin), NULL);
       return;
     }
-    uv_read_start(reinterpret_cast<uv_stream_t *>(tcpin), AllocForRead, TestRead);
+    uv_read_start(reinterpret_cast<uv_stream_t *>(tcpin), AllocForRead, HandleReadCB);
   }
 
   static void BindSocket(Nan::NAN_METHOD_ARGS_TYPE args_info) {
@@ -325,39 +337,22 @@ public:
     // *some* help from: https://nikhilm.github.io/uvbook/networking.html
     struct sockaddr_in myaddr;
 
-    uv_tcp_init(uv_default_loop(), &myself->mytcphandle);
-    myself->mytcphandle.data = myself;
+    uv_tcp_t * mytcp = &myself->mytcphandle;
+
+    uv_tcp_init(uv_default_loop(), mytcp);
+    mytcp->data = myself;
+
     // XXX TODO TODO IP 6:
     uv_ip4_addr(*v8::String::Utf8Value(args_info[0]->ToString()),
                 args_info[1]->Int32Value(), &myaddr);
-    uv_tcp_bind(&myself->mytcphandle, reinterpret_cast<const sockaddr *>(&myaddr), 0);
+    uv_tcp_bind(mytcp, reinterpret_cast<const sockaddr *>(&myaddr), 0);
 
-    int res = uv_listen(reinterpret_cast<uv_stream_t *>(&myself->mytcphandle),
-                        1024, HandleNewConnection);
+    int res = uv_listen(reinterpret_cast<uv_stream_t *>(mytcp), 1024, HandleNewConnection);
+
     if (res != 0) {
       std::cerr << "sorry listen error: " << res << std::endl;
     }
   }
-
-/*
-  static void uvtest(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    // *some* help from: https://nikhilm.github.io/uvbook/networking.html
-    // XXX TODO TODO:
-    static uv_tcp_t mytcp;
-    struct sockaddr_in myaddr;
-
-    std::cout << "start uvtest" << std::endl;
-    uv_tcp_init(uv_default_loop(), &mytcp);
-    uv_ip4_addr("0.0.0.0", 8000, &myaddr);
-    uv_tcp_bind(&mytcp, reinterpret_cast<const sockaddr *>(&myaddr), 0);
-    std::cout << "start listen" << std::endl;
-    int res = uv_listen(reinterpret_cast<uv_stream_t *>(&mytcp), 1024, HandleNewConnection);
-    if (res != 0) {
-      std::cerr << "sorry listen error: " << res << std::endl;
-    }
-    std::cout << "finished uvtest function" << std::endl;
-  }
-*/
 
   // XXX TODO support closing
 
