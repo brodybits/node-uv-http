@@ -1,1 +1,1 @@
-module.exports = require('bindings')('node-uv-http');
+module.exports = require('bindings')('node-uvhttp');

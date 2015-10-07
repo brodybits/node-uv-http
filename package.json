@@ -1,5 +1,5 @@
 {
-  "name": "node-uv-http",
+  "name": "node-uvhttp",
   "version": "0.0.1-dev",
   "description": "Node HTTP server library that serves static content from native code",
   "main": "index.js",
@@ -16,5 +16,6 @@
   "dependencies": {
     "bindings": "^1.2.1",
     "nan": "^2.0.9"
-  }
+  },
+  "engines": { "node": ">=0.12.0" }
 }

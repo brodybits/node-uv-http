@@ -1,17 +1,18 @@
-var i = require('./');
-var p = require('process');
+var uvhttp = require('./');
+var p = require('process'); // Node.js/io.js 1.0 or greater
 
 var myhost = "0.0.0.0",
     myport = 8080;
 
-var httpServer = i.newHTTPServer();
+var httpServer = uvhttp.newHTTPServer();
 httpServer.bindAddr(myhost, myport, 111);
+
+httpServer.staticPath("/static", 200, "Static content from /static path\n");
 
 httpServer.pathCB("/test", function(r) {
   r.res(200, 'Response from /test Javascript callback\n');
 });
 
-httpServer.staticPath("/", 200, "Content from root path\n");
 
 httpServer.pathCB("/test2", function(r) {
   setTimeout(function() {
@@ -24,5 +25,7 @@ httpServer.pathCB("/stop", function(r) {
   console.log('/stop callback, stopping server');
   p.exit();
 });
+
+httpServer.staticPath("/", 200, "Static content from root path\n");
 
 console.log("HTTP server listening to port: " + myport)

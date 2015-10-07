@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "node-uv-http",
+      "target_name": "node-uvhttp",
       "sources": [
         "binding.cc"
       ],
