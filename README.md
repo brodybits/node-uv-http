@@ -16,16 +16,19 @@ WARNING: This project is under development and should be considered experimental
 API is subject to change and some optimizations may be needed.
 
 Major TODOs:
-- Automatic testing
+- Benchmarking
 - BROKEN: Incoming HTTP request framing
 - BROKEN: status codes
 - Error checking
-- Content-Type header
+- Content-Type
+- Incoming HTTP header parsing
+- Support outgoing HTTP response headers
 - Support binary data using Buffer
 - Support Keep-Alive
 
 Highly desired:
 - Multi-threading support, using node-webworker-threads and/or JXCore
+- Web socket
 
 Other features under consideration:
 - HTTPS
@@ -67,33 +70,8 @@ To rebuild:
 node-gyp rebuild
 ```
 
-To run:
+To run test:
 
 ```shell
-node mytest.js
-```
-
-In another window:
-
-Static content from native code:
-
-```shell
-curl http://localhost:8080
-```
-
-Content from Javascript callback:
-
-```shell
-curl http://localhost:8080/test
-```
-
-Content from Javascript callback in the next tick:
-
-```shell
-curl http://localhost:8080/test2
-```
-
-To stop the test program:
-```shell
-curl http://localhost:8080/stop
+npm test
 ```
