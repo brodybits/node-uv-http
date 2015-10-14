@@ -22,6 +22,7 @@ Major TODOs:
 - BROKEN: Incoming HTTP request framing
 - BROKEN: only supports HTTP GET
 - BROKEN: status codes
+- BROKEN: multi-threading on JXCore
 - Error checking
 - Content-Type
 - Incoming HTTP header parsing
@@ -33,7 +34,6 @@ Major TODOs:
 - send static content from file instead of memory using sendfile
 
 Highly desired:
-- Multi-threading support, using node-webworker-threads and/or JXCore
 - Web socket
 - Integration with a higher-level framework such as express.js
 

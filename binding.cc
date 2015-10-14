@@ -2,7 +2,11 @@
 #include <iostream>
 #include <sstream>
 
+#if NODE_MODULE_VERSION > NODE_0_10_MODULE_VERSION
 #include <tr1/unordered_map>
+#else
+#include <map>
+#endif
 
 // made with *some* help from:
 // - https://github.com/brodybits/nan/blob/cb-object-wrapper-template/test/cpp/wrappedobjectfactory.cpp
@@ -382,7 +386,11 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
   // XXX TODO support closing
 
   // XXX TODO use something better such as @c9s/r3 instead (!)
+#if NODE_MODULE_VERSION > NODE_0_10_MODULE_VERSION
   std::tr1::unordered_map<std::string, PathInfo> routes;
+#else
+  std::map<std::string, PathInfo> routes;
+#endif
 
   // FUTURE TBD ???: mTCP - user-space TCP
   uv_tcp_t mytcphandle;
