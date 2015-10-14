@@ -194,13 +194,32 @@ public:
     myself->routes[mypath] = pi;
   }
 
+#if NODE_MODULE_VERSION > NODE_0_10_MODULE_VERSION
   static void AllocForRead(uv_handle_t *, size_t s, uv_buf_t * b) {
     void * mybuf = malloc(s);
     b->base = reinterpret_cast<char *>(mybuf);
     b->len = s;
   }
+#else
+  static uv_buf_t AllocForRead(uv_handle_t *, size_t s) {
+    void * mybuf = malloc(s);
+    uv_buf_t b = {
+      .base = reinterpret_cast<char *>(mybuf),
+      .len = s
+    };
+    return b;
+  }
+#endif
 
-  static void HandleReadCB(uv_stream_t * s, ssize_t n, const uv_buf_t * b) {
+#if NODE_MODULE_VERSION > NODE_0_10_MODULE_VERSION
+  static void HandleReadCB(uv_stream_t * s, ssize_t n, const uv_buf_t * b)
+#else
+static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
+#endif
+  {
+#if NODE_MODULE_VERSION <= NODE_0_10_MODULE_VERSION
+    const uv_buf_t * b = &buf;
+#endif
     std::cout << "read cb n: " << n << std::endl;
 
     // XXX TODO [MISSING]:
@@ -343,9 +362,15 @@ public:
     mytcp->data = myself;
 
     // XXX TODO TODO IP 6:
+#if NODE_MODULE_VERSION > NODE_0_10_MODULE_VERSION
     uv_ip4_addr(*v8::String::Utf8Value(args_info[0]->ToString()),
                 args_info[1]->Int32Value(), &myaddr);
     uv_tcp_bind(mytcp, reinterpret_cast<const sockaddr *>(&myaddr), 0);
+#else
+    myaddr = uv_ip4_addr(*v8::String::Utf8Value(args_info[0]->ToString()),
+                         args_info[1]->Int32Value());
+    uv_tcp_bind(mytcp, myaddr);
+#endif
 
     int res = uv_listen(reinterpret_cast<uv_stream_t *>(mytcp), 1024, HandleNewConnection);
 
@@ -378,4 +403,4 @@ void init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target) {
            Nan::New<v8::FunctionTemplate>(HTTPServer::NewInstance)->GetFunction());
 }
 
-NODE_MODULE(evhtp, init)
+NODE_MODULE(uvhttp, init)

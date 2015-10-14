@@ -4,7 +4,7 @@
   "description": "Node HTTP server library that serves static content from native code",
   "main": "index.js",
   "scripts": {
-    "test": "tap mytest.js",
+    "test": "node mytest.js",
     "install": "node-gyp rebuild"
   },
   "keywords": [
@@ -14,13 +14,14 @@
   "license": "MIT",
   "gypfile": true,
   "dependencies": {
-    "bindings": "^1.2.1",
-    "nan": "^2.0.9"
+    "bindings": "1.2.x",
+    "nan": "2.1.x"
   },
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=0.10.16"
   },
   "devDependencies": {
-    "tap": "^2.1.1"
+    "exit": "0.1.x",
+    "tap": "2.1.x"
   }
 }

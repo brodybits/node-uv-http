@@ -1,7 +1,7 @@
 var uvhttp = require('./');
-var p = require('process'); // Node.js/io.js 1.0 or greater
 var http = require('http');
 var tap = require('tap');
+var exit = require('exit');
 
 var myhost = "0.0.0.0",
     myport = 8080;
@@ -19,13 +19,16 @@ httpServer.pathCB("/test", function(r) {
 httpServer.pathCB("/test2", function(r) {
   setTimeout(function() {
     r.res(200, 'Response from /test2 Javascript callback\n');
-  }, 0)
+  }, 0);
 });
 
 httpServer.pathCB("/stop", function(r) {
   r.res(200, '/stop callback, stopping server\n');
-  console.log('/stop callback, stopping server');
-  p.exit();
+  console.log('/stop callback, stopping server (in the next tick)');
+  setTimeout(function() {
+    console.log('/stop callback, stopping server NOW');
+    exit();
+  }, 0);
 });
 
 httpServer.staticPath("/", 200, "Static content from root path\n");
@@ -120,5 +123,6 @@ tap.test('stop', function(t) {
     path: '/stop',
     port: 8080
   });
+  t.assert(true);
   t.end();
 });

@@ -16,6 +16,8 @@ WARNING: This project is under development and should be considered experimental
 API is subject to change and some optimizations may be needed.
 
 Major TODOs:
+- IPv6
+- (Travis) CI
 - Real benchmarking
 - BROKEN: Incoming HTTP request framing
 - BROKEN: only supports HTTP GET
@@ -26,10 +28,14 @@ Major TODOs:
 - Support outgoing HTTP response headers
 - Support binary data using Buffer
 - Support Keep-Alive
+- Support an interface similar to Node.js built-in HTTP server, perhaps in a higher-level library
+- CLEANUP remove developer test logging statements
+- send static content from file instead of memory using sendfile
 
 Highly desired:
 - Multi-threading support, using node-webworker-threads and/or JXCore
 - Web socket
+- Integration with a higher-level framework such as express.js
 
 Other features under consideration:
 - HTTPS
