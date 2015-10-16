@@ -55,21 +55,22 @@ struct PathInfo {
   Nan::Persistent<v8::Function> pf;
 };
 
-class HTTPServerReq : public ObjectWrapTemplate<HTTPServerReq> {
+class HTTPServerReq : public ObjectWrapTemplateBase<HTTPServerReq> {
 public:
-  static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
+  static inline v8::Local<v8::FunctionTemplate>
+  MakeConstructorFunctionTemplate(const char *object_class_name) {
     v8::Local<v8::FunctionTemplate> tpl =
-      NewConstructorFunctionTemplate("HTTPServerReq", 1);
+      NewConstructorFunctionTemplate(object_class_name, 1);
     SetPrototypeMethod(tpl, "res", res);
-    SetConstructorFunctionTemplate(tpl);
+    return tpl;
   }
 
   HTTPServerReq(Nan::NAN_METHOD_ARGS_TYPE args_info) : info(NULL) {} //, r(NULL) {}
 
   ~HTTPServerReq() {}
 
-  static v8::Local<v8::Value> NewInstance(int argc, v8::Local<v8::Value> argv[]) {
-    return NewInstanceMethod(argc, argv);
+  static v8::Local<v8::Value> NewInstance(v8::Local<v8::Function> cons, int argc, v8::Local<v8::Value> argv[]) {
+    return NewInstanceMethod(cons, argc, argv);
   }
 
   static void res(Nan::NAN_METHOD_ARGS_TYPE args_info) {
@@ -116,28 +117,30 @@ public:
   uv_stream_t * s;
 };
 
-class HTTPServer : public ObjectWrapTemplate<HTTPServer> {
+class HTTPServer : public ObjectWrapTemplateBase<HTTPServer> {
 public:
-  static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
+  static inline v8::Local<v8::FunctionTemplate>
+  MakeConstructorFunctionTemplate(const char *object_class_name) {
     v8::Local<v8::FunctionTemplate> tpl =
-      NewConstructorFunctionTemplate("HTTPServer", 1);
+      NewConstructorFunctionTemplate(object_class_name, 1);
     SetPrototypeMethod(tpl, "staticPath", StaticPath);
     SetPrototypeMethod(tpl, "pathCB", PathCB);
     SetPrototypeMethod(tpl, "bindSocket", BindSocket);
     SetPrototypeMethod(tpl, "bindAddr", BindAddr);
-    SetConstructorFunctionTemplate(tpl);
+    return tpl;
   }
 
-  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {}
+  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    req_constructor_tpl.Reset(
+      HTTPServerReq::MakeConstructorFunctionTemplate("HTTPServerReq"));
+    req_constructor.Reset(
+      Nan::GetFunction(Nan::New(req_constructor_tpl)).ToLocalChecked());
+  }
 
   ~HTTPServer() {}
 
-  static void NewInstance(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    NewInstanceMethod(args_info);
-  }
-
-  static v8::Local<v8::Value> NewInstance(int argc, v8::Local<v8::Value> argv[]) {
-    return NewInstanceMethod(argc, argv);
+  static void NewInstance(v8::Local<v8::Function> cons, Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    NewInstanceMethod(cons, args_info);
   }
 
   static void StaticPath(Nan::NAN_METHOD_ARGS_TYPE args_info) {
@@ -266,7 +269,8 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
 
         // XXX UGLY (TODO CLEANUP)
         v8::Local<v8::Value> sr_argv[1] = {Nan::New(1)};
-        v8::Local<v8::Object> sr = HTTPServerReq::NewInstance(1, sr_argv)->ToObject();
+        v8::Local<v8::Object> sr = HTTPServerReq::NewInstance(
+          Nan::New(myself->req_constructor), 1, sr_argv)->ToObject();
 
         HTTPServerReq * mysr = ObjectWrap::Unwrap<HTTPServerReq>(sr);
         // XXX VERY UGLY
@@ -394,21 +398,20 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
 
   // FUTURE TBD ???: mTCP - user-space TCP
   uv_tcp_t mytcphandle;
+
+  Nan::Persistent<v8::FunctionTemplate> req_constructor_tpl;
+  Nan::Persistent<v8::Function> req_constructor;
 };
 
-/*
-void MyEventServer::NewHTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-  v8::Local<v8::Value> lv = args_info.This();
-  v8::Local<v8::Value> argv[1] = { lv };
-  args_info.GetReturnValue().Set(HTTPServer::NewInstance(1, argv));
+static void NewHTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+  HTTPServer::NewInstance(Nan::GetFunction(
+    HTTPServer::MakeConstructorFunctionTemplate("HTTPServer")).ToLocalChecked(),
+    args_info);
 }
-*/
 
-void init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target) {
-  HTTPServerReq::Init(target);
-  HTTPServer::Init(target);
+static void init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target) {
   Nan::Set(target, Nan::New<v8::String>("newHTTPServer").ToLocalChecked(),
-           Nan::New<v8::FunctionTemplate>(HTTPServer::NewInstance)->GetFunction());
+           Nan::New<v8::FunctionTemplate>(NewHTTPServer)->GetFunction());
 }
 
 NODE_MODULE(uvhttp, init)
