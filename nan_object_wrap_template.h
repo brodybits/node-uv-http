@@ -16,24 +16,24 @@
 template <typename T>
 class ObjectWrapTemplate : public Nan::ObjectWrap {
  protected:
-  typedef v8::Local<v8::FunctionTemplate> function_template;
-
-  static inline function_template
-  NewConstructorFunctionTemplate(const char * object_name, int internal_field_count) {
-    function_template tpl = Nan::New<v8::FunctionTemplate>(New);
+  static inline v8::Local<v8::FunctionTemplate>
+  NewConstructorFunctionTemplate(const char * object_name,
+                                 int internal_field_count) {
+    v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
     tpl->SetClassName(Nan::New(object_name).ToLocalChecked());
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
     return tpl;
   }
 
   static inline void
-  SetConstructorFunctionTemplate(function_template tpl) {
-    constructor().Reset(tpl->GetFunction());
+  SetConstructorFunctionTemplate(v8::Local<v8::FunctionTemplate> tpl) {
+    constructor().Reset(Nan::GetFunction(tpl).ToLocalChecked());
   }
 
   static inline void
   SetNewFunction(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE target,
-                 function_template tpl, const char * object_name) {
+                 v8::Local<v8::FunctionTemplate> tpl,
+                 const char * object_name) {
     Nan::Set(target, Nan::New(object_name).ToLocalChecked(), tpl->GetFunction());
   }
 
@@ -59,7 +59,7 @@ class ObjectWrapTemplate : public Nan::ObjectWrap {
     const int argc = info.Length();
     std::vector<v8::Local<v8::Value> > argv;
     for (int i=0; i<argc; ++i) argv.push_back(info[i]);
-    info.GetReturnValue().Set(cons->NewInstance(argc, &argv[0]));
+    info.GetReturnValue().Set(Nan::NewInstance(cons, argc, &argv[0]).ToLocalChecked());
   }
   static inline v8::Local<v8::Value> NewInstanceMethod(int argc, v8::Local<v8::Value> argv[]) {
     v8::Local<v8::Function> cons = Nan::New(constructor());
@@ -72,8 +72,8 @@ class ObjectWrapTemplate : public Nan::ObjectWrap {
 
  private:
   static inline Nan::Persistent<v8::Function> & constructor() {
-    static Nan::Persistent<v8::Function> constructor_;
-    return constructor_;
+    static Nan::Persistent<v8::Function> my_constructor;
+    return my_constructor;
   }
 };
 
