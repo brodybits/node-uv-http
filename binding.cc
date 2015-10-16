@@ -58,18 +58,24 @@ struct PathInfo {
 class HTTPServerReq : public ObjectWrapTemplate<HTTPServerReq> {
 public:
   static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
+    SetConstructorFunctionTemplate(MakeConstructorFunctionTemplate());
+  }
+  static inline v8::Local<v8::Function> GetConstructorFunction() {
+    return Nan::GetFunction(GetConstructorFunctionTemplate()).ToLocalChecked();
+  }
+  static inline v8::Local<v8::FunctionTemplate> MakeConstructorFunctionTemplate() {
     v8::Local<v8::FunctionTemplate> tpl =
       NewConstructorFunctionTemplate("HTTPServerReq", 1);
     SetPrototypeMethod(tpl, "res", res);
-    SetConstructorFunctionTemplate(tpl);
+    return tpl;
   }
 
   HTTPServerReq(Nan::NAN_METHOD_ARGS_TYPE args_info) : info(NULL) {} //, r(NULL) {}
 
   ~HTTPServerReq() {}
 
-  static v8::Local<v8::Value> NewInstance(int argc, v8::Local<v8::Value> argv[]) {
-    return NewInstanceMethod(argc, argv);
+  static v8::Local<v8::Value> NewInstance(v8::Local<v8::Function> cons, int argc, v8::Local<v8::Value> argv[]) {
+    return NewInstanceMethod(cons, argc, argv);
   }
 
   static void res(Nan::NAN_METHOD_ARGS_TYPE args_info) {
@@ -119,23 +125,46 @@ public:
 class HTTPServer : public ObjectWrapTemplate<HTTPServer> {
 public:
   static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
+    SetConstructorFunctionTemplate(MakeConstructorFunctionTemplate());
+  }
+  static inline v8::Local<v8::FunctionTemplate> MakeConstructorFunctionTemplate() {
     v8::Local<v8::FunctionTemplate> tpl =
       NewConstructorFunctionTemplate("HTTPServer", 1);
     SetPrototypeMethod(tpl, "staticPath", StaticPath);
     SetPrototypeMethod(tpl, "pathCB", PathCB);
     SetPrototypeMethod(tpl, "bindSocket", BindSocket);
     SetPrototypeMethod(tpl, "bindAddr", BindAddr);
-    SetConstructorFunctionTemplate(tpl);
+    return tpl;
   }
 
-  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {}
+  HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    //req_constructor.Reset(HTTPServerReq::GetConstructorFunction());
+    req_constructor_tpl.Reset(HTTPServerReq::MakeConstructorFunctionTemplate());
+    req_constructor.Reset(
+      Nan::GetFunction(Nan::New(req_constructor_tpl)).ToLocalChecked());
+  }
 
   ~HTTPServer() {}
 
+  // XXX REMOVE ?!?
   static void NewInstance(Nan::NAN_METHOD_ARGS_TYPE args_info) {
-    NewInstanceMethod(args_info);
+    //NewInstanceMethod(args_info);
+    //NewInstanceMethod(Nan::GetFunction(GetConstructorFunctionTemplate()).ToLocalChecked(), args_info);
+    NewInstanceMethod(Nan::GetFunction(
+      MakeConstructorFunctionTemplate()).ToLocalChecked(), args_info);
   }
 
+  // XXX REMOVE ?!?
+  static void NewInstance(v8::Local<v8::Function> cons, Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    NewInstanceMethod(cons, args_info);
+  }
+
+  // XXX REMOVE ?!?
+static v8::Local<v8::Value> NewInstance(v8::Local<v8::Function> cons, int argc, v8::Local<v8::Value> argv[]) {
+  return NewInstanceMethod(cons, argc, argv);
+}
+
+// XXX REMOVE ?!?
   static v8::Local<v8::Value> NewInstance(int argc, v8::Local<v8::Value> argv[]) {
     return NewInstanceMethod(argc, argv);
   }
@@ -266,7 +295,8 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
 
         // XXX UGLY (TODO CLEANUP)
         v8::Local<v8::Value> sr_argv[1] = {Nan::New(1)};
-        v8::Local<v8::Object> sr = HTTPServerReq::NewInstance(1, sr_argv)->ToObject();
+        v8::Local<v8::Object> sr = HTTPServerReq::NewInstance(
+          Nan::New(myself->req_constructor), 1, sr_argv)->ToObject();
 
         HTTPServerReq * mysr = ObjectWrap::Unwrap<HTTPServerReq>(sr);
         // XXX VERY UGLY
@@ -394,6 +424,9 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
 
   // FUTURE TBD ???: mTCP - user-space TCP
   uv_tcp_t mytcphandle;
+
+  Nan::Persistent<v8::FunctionTemplate> req_constructor_tpl;
+  Nan::Persistent<v8::Function> req_constructor;
 };
 
 /*
