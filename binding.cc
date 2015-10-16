@@ -58,7 +58,7 @@ struct PathInfo {
 class HTTPServerReq : public ObjectWrapTemplate<HTTPServerReq> {
 public:
   static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
-    function_template tpl =
+    v8::Local<v8::FunctionTemplate> tpl =
       NewConstructorFunctionTemplate("HTTPServerReq", 1);
     SetPrototypeMethod(tpl, "res", res);
     SetConstructorFunctionTemplate(tpl);
@@ -119,7 +119,7 @@ public:
 class HTTPServer : public ObjectWrapTemplate<HTTPServer> {
 public:
   static void Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE ignored) {
-    function_template tpl =
+    v8::Local<v8::FunctionTemplate> tpl =
       NewConstructorFunctionTemplate("HTTPServer", 1);
     SetPrototypeMethod(tpl, "staticPath", StaticPath);
     SetPrototypeMethod(tpl, "pathCB", PathCB);
