@@ -15,6 +15,8 @@ I may offer this work under other licensing terms in the future.
 WARNING: This project is under development and should be considered experimental.
 API is subject to change and some optimizations may be needed.
 
+Also works on JXCore with multi-threading.
+
 Major TODOs:
 - IPv6
 - (Travis) CI
@@ -22,7 +24,6 @@ Major TODOs:
 - BROKEN: Incoming HTTP request framing
 - BROKEN: only supports HTTP GET
 - BROKEN: status codes
-- BROKEN: multi-threading on JXCore
 - Error checking
 - Content-Type
 - Incoming HTTP header parsing

@@ -131,8 +131,15 @@ public:
   }
 
   HTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+    static int my_class_id = 0;
+
+    std::stringstream sst;
+    sst << "HTTPServerReq_" << my_class_id;
+
     req_constructor_tpl.Reset(
-      HTTPServerReq::MakeConstructorFunctionTemplate("HTTPServerReq"));
+      HTTPServerReq::MakeConstructorFunctionTemplate(
+        sst.str().c_str()));
+
     req_constructor.Reset(
       Nan::GetFunction(Nan::New(req_constructor_tpl)).ToLocalChecked());
   }
@@ -404,8 +411,14 @@ static void HandleReadCB(uv_stream_t * s, ssize_t n, uv_buf_t buf)
 };
 
 static void NewHTTPServer(Nan::NAN_METHOD_ARGS_TYPE args_info) {
+  static int my_class_id = 0;
+
+  std::stringstream sst;
+  sst << "HTTPServer_" << my_class_id;
+
   HTTPServer::NewInstance(Nan::GetFunction(
-    HTTPServer::MakeConstructorFunctionTemplate("HTTPServer")).ToLocalChecked(),
+    HTTPServer::MakeConstructorFunctionTemplate(
+      sst.str().c_str())).ToLocalChecked(),
     args_info);
 }
 
