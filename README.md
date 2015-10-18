@@ -15,7 +15,7 @@ I may offer this work under other licensing terms in the future.
 WARNING: This project is under development and should be considered experimental.
 API is subject to change and some optimizations may be needed.
 
-Also works on JXCore with multi-threading.
+Also works on [JXCore](http://jxcore.io/) with multi-threading.
 
 Major TODOs:
 - IPv6
@@ -44,6 +44,7 @@ Other features under consideration:
 
 ## Usage
 
+```Javascript
 var uvhttp = require('./node-uvhttp');
 
 var myhost = "0.0.0.0",
@@ -65,6 +66,7 @@ httpServer.pathCB("/test2", function(r) {
 });
 
 httpServer.staticPath("/", 200, "Static content from root path\n");
+```
 
 ## Local test
 
@@ -284,5 +286,4 @@ Especially if this project is use to serve both static and dynamic content,
 multi-processing will be very important, using either multiple processes or
 multiple threads. Having multiple processes listening to the same port
 has been reported to cause problems under certain circumstances.
-Multi-threading is the recommended approach, using something like either JXCore
-or perhaps [node-webworker-threads](https://github.com/audreyt/node-webworker-threads).
+Multi-threading is the recommended approach, which is now working with [JXCore](http://jxcore.io/).
